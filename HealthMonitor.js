@@ -14,7 +14,7 @@ var HealthMonitor = HealthMonitor || (function () {
 
     //---- INFO ----//
 
-    var version = '1.0.1',
+    var version = '1.0.2',
     debugMode = false,
     MARKERS,
     ALT_MARKERS = [{name:'red', tag: 'red', url:"#C91010"}, {name: 'blue', tag: 'blue', url: "#1076C9"}, {name: 'green', tag: 'green', url: "#2FC910"}, {name: 'brown', tag: 'brown', url: "#C97310"}, {name: 'purple', tag: 'purple', url: "#9510C9"}, {name: 'pink', tag: 'pink', url: "#EB75E1"}, {name: 'yellow', tag: 'yellow', url: "#E5EB75"}, {name: 'dead', tag: 'dead', url: "X"}],
@@ -74,16 +74,19 @@ var HealthMonitor = HealthMonitor || (function () {
         var message = '', err = '', parms = msg.content.replace('!hm config ', '').split(/\s*\-\-/i);
         _.each(parms, function (x) {
             var action = x.trim().split(/\s*\|\s*/i);
+            if (action[1] && action[1].search('%') !== -1) action[1] = action[1].replace('%', '');
             if (action[0] == 'wounded-level' && action[1] != '' && isNum(action[1]) && parseInt(action[1]) < 100 && parseInt(action[1]) > 0) {
                 state['HealthMonitor'].woundedLevel = parseInt(action[1]) / 100;
             }
             if (action[0] == 'wounded-color') {
+                if (action[1].startsWith('#')) action[1] = action[1].substr(1);
                 if (action[1].match(/^([0-9a-fA-F]{3}){1,2}$/) !== null) state['HealthMonitor'].woundedColor = '#' + action[1];
             }
             if (action[0] == 'dying-level' && action[1] != '' && isNum(action[1]) && parseInt(action[1]) < 100 && parseInt(action[1]) > 0) {
                 state['HealthMonitor'].dyingLevel = parseInt(action[1]) / 100;
             }
             if (action[0] == 'dying-color') {
+                if (action[1].startsWith('#')) action[1] = action[1].substr(1);
                 if (action[1].match(/^([0-9a-fA-F]{3}){1,2}$/) !== null) state['HealthMonitor'].dyingColor = '#' + action[1];
             }
             if (action[0] == 'health-bar' && action[1] != '') {
@@ -101,36 +104,30 @@ var HealthMonitor = HealthMonitor || (function () {
         if (state['HealthMonitor'].woundedLevel == state['HealthMonitor'].dyingLevel) state['HealthMonitor'].woundedLevel += 0.01;
 
         message += '<div style=\'' + styles.title + '\'>Wounded Indicator</div>';
-        message += 'The HP percentage where the token is marked as "wounded" is <b>' + parseInt(state['HealthMonitor'].woundedLevel * 100) + '</b> <a style="' + styles.textButton + '" href="!hm config --wounded-level|&#63;&#123;Percent&#124;' + parseInt(state['HealthMonitor'].woundedLevel * 100) + '&#125;">change</a><br><br>';
-        message += 'The button below is your Wounded indicator color: <i>#' + state['HealthMonitor'].woundedColor.substr(1)
-        + '</i>. To change, use the button to enter a hexadecimal color value without the hash (#).<br>';
-        message += '<div style=\'' + styles.buttonWrapper + '\'><a style="' + styles.button + '; background-color: ' + state['HealthMonitor'].woundedColor + '; color: ' + getContrastColor(state['HealthMonitor'].woundedColor) + '" href="!hm config --wounded-color|&#63;&#123;Wounded Color&#124;' + state['HealthMonitor'].woundedColor.substr(1) + '&#125;" title="Change the Wounded indicator color">Change 🎨</a></div>';
+        message += '"Wounded" threshold: <a style="' + styles.textButton + 'font-size: 1.25em;" href="!hm config --wounded-level|&#63;&#123;Percent (numbers only)&#124;' + parseInt(state['HealthMonitor'].woundedLevel * 100) + '&#125;" title="Change the Wounded thrshhold percent">' + parseInt(state['HealthMonitor'].woundedLevel * 100) + '</a>%<br>';
+        message += '<div style=\'' + styles.buttonWrapper + '\'><a style="' + styles.button + '; background-color: ' + state['HealthMonitor'].woundedColor + '; color: ' + getContrastColor(state['HealthMonitor'].woundedColor) + '" href="!hm config --wounded-color|&#63;&#123;Enter hexadecimal value&#124;' + state['HealthMonitor'].woundedColor.substr(1) + '&#125;" title="Change the Wounded indicator color">Change 🎨</a></div>';
 
         message += '<hr style="margin: 4px 12px 8px;"><div style=\'' + styles.title + '\'>Dying Indicator</div>';
-        message += 'The HP percentage where the token is marked as "dying" or near death is <b>' + parseInt(state['HealthMonitor'].dyingLevel * 100) + '</b> <a style="' + styles.textButton + '" href="!hm config --dying-level|&#63;&#123;Percent&#124;' + parseInt(state['HealthMonitor'].dyingLevel * 100) + '&#125;">change</a><br><br>';
-        message += 'The button below is your Dying indicator color: <i>#' + state['HealthMonitor'].dyingColor.substr(1)
-        + '</i>. To change, use the button to enter a hexadecimal color value without the hash (#).<br>';
-        message += '<div style=\'' + styles.buttonWrapper + '\'><a style="' + styles.button + '; background-color: ' + state['HealthMonitor'].dyingColor + '; color: ' + getContrastColor(state['HealthMonitor'].dyingColor) + '" href="!hm config --dying-color|&#63;&#123;Dying Color&#124;' + state['HealthMonitor'].dyingColor.substr(1) + '&#125;" title="Change the Dying indicator color">Change 🎨</a></div>';
-
-        message += '<hr style="margin: 4px 12px 8px;"><div style=\'' + styles.title + '\'>Options</div>';
-        message += '<b>Health Bar: ' + state['HealthMonitor'].healthBar.replace('bar', 'Bar ') + '</b> <a style="' + styles.textButton + '" href="!hm config --health-bar|&#63;&#123;Health Bar&#124;Bar 1,bar1&#124;Bar 2,bar2&#124;Bar 3,bar3&#125;" title="Change which bar indicates health.">change</a><br>';
-        message += 'Indicates which token bar to monitor for health.<br>';
-        message += '<br><b>Aura: Aura ' + (state['HealthMonitor'].useAura1 ? '1' : '2') + '</b> <a style="' + styles.textButton + '" href="!hm config --aura-toggle" title="Toggle the aura use setting">change</a><br>';
-        message += 'Indicates which aura to use when showing "wounded" or "dying" status.<br>';
-        message += '<br><b>Enforce Max: ' + (state['HealthMonitor'].enforceMax ? 'On' : 'Off') + '</b> <a style="' + styles.textButton + '" href="!hm config --max-toggle" title="Toggle the enforce max setting">change</a><br>';
-        message += 'Whether or not to enforce the max value on the Health Bar for <i>all tokens</i>.';
+        message += '"Dying" threshold: <a style="' + styles.textButton + 'font-size: 1.25em;" href="!hm config --dying-level|&#63;&#123;Percent (numbers only)&#124;' + parseInt(state['HealthMonitor'].dyingLevel * 100) + '&#125;" title="Change the Dying threshold percent">' + parseInt(state['HealthMonitor'].dyingLevel * 100) + '</a>%<br>';
+        message += '<div style=\'' + styles.buttonWrapper + '\'><a style="' + styles.button + '; background-color: ' + state['HealthMonitor'].dyingColor + '; color: ' + getContrastColor(state['HealthMonitor'].dyingColor) + '" href="!hm config --dying-color|&#63;&#123;Enter hexadecimal value&#124;' + state['HealthMonitor'].dyingColor.substr(1) + '&#125;" title="Change the Dying indicator color">Change 🎨</a></div>';
 
         var curr_marker = _.find(MARKERS, function (x) { return x.tag == state['HealthMonitor'].deadMarker; });
         if (typeof curr_marker == 'undefined') curr_marker = _.find(ALT_MARKERS, function (x) { return x.tag == state['HealthMonitor'].deadMarker; });
         message += '<hr style="margin: 8px 12px;"><div style=\'' + styles.title + '\'>Dead Marker</div>' + getMarker(curr_marker, marker_style);
         if (typeof curr_marker == 'undefined') message += '<b style="color: #c00;">Warning:</b> The token marker "' + state['HealthMonitor'].deadMarker + '" is invalid!';
         else message += 'This is the current token marker used to indicate death. You may change it below.';
-
-
         message += '<div style="' + styles.buttonWrapper + '"><a style="' + styles.button + '" href="!hm markers" title="This may result in a very long list...">Choose Marker</a></div>';
-        message += '<div style="text-align: center;"><a style="' + styles.textButton + '" href="!hm --set-marker &#63;&#123;Token Marker&#124;&#125;">Set manually</a></div><br>';
+        message += '<div style="text-align: center;"><a style="' + styles.textButton + '" href="!hm --set-marker &#63;&#123;Token Marker tag&#124;&#125;">Set manually</a></div><br>';
 
-        message += '<hr style="margin: 4px 12px 8px;">See the <a style="' + styles.textButton + '" href="https://github.com/blawson69/HealthMonitor">documentation</a> for complete instructions.<br>';
+        message += '<hr style="margin: 4px 12px 8px;"><div style=\'' + styles.title + '\'>Options</div>';
+        message += '<b>Health Bar: ' + state['HealthMonitor'].healthBar.replace('bar', 'Bar ') + '</b> <a style="' + styles.textButton + '" href="!hm config --health-bar|&#63;&#123;Health Bar&#124;Bar 1,bar1&#124;Bar 2,bar2&#124;Bar 3,bar3&#125;" title="Change which bar indicates health.">choose</a><br>';
+        message += 'Token bar to monitor for NPC health.<br>';
+        message += '<br><b>Aura: Aura ' + (state['HealthMonitor'].useAura1 ? '1' : '2') + '</b> <a style="' + styles.textButton + '" href="!hm config --aura-toggle" title="Toggle the aura use setting">toggle</a><br>';
+        message += 'Aura to use for "wounded" or "dying" status.<br>';
+        message += '<br><b>Enforce Max: ' + (state['HealthMonitor'].enforceMax ? 'On' : 'Off') + '</b> <a style="' + styles.textButton + '" href="!hm config --max-toggle" title="Toggle the enforce max setting">toggle</a><br>';
+        message += 'Whether to enforce max value on Health Bar for <i>all tokens</i>.';
+
+        message += '<hr style="margin: 4px 12px 8px;"><p>See the <a style="' + styles.textButton + '" href="https://github.com/blawson69/HealthMonitor">documentation</a> for complete instructions.</p>';
         showDialog('', message);
     },
 
@@ -182,14 +179,14 @@ var HealthMonitor = HealthMonitor || (function () {
 
             if (_.find(status_markers, function (x) { return x == marker.tag; })) {
                 var icon = _.find(MARKERS, function (x) { return x.tag == marker.tag; });
-                return_marker = '<img src="' + icon.url + '" width="24" height="24" style="' + marker_style + '" />';
+                return_marker = '<img src="' + icon.url + '" width="24" height="24" style="' + marker_style + '" title="' + icon.name + '" />';
             } else if (typeof alt_marker !== 'undefined') {
                 if (alt_marker.url === 'X') {
                     marker_style += 'color: #C91010; font-size: 30px; line-height: 24px; font-weight: bold; text-align: center; padding-top: 0px; overflow: hidden;';
-                    return_marker = '<div style="' + marker_style + '">X</div>';
+                    return_marker = '<div style="cursor: default;' + marker_style + '" title="dead">X</div>';
                 } else {
                     marker_style += 'background-color: ' + alt_marker.url + '; border: 1px solid #fff; border-radius: 50%;';
-                    return_marker = '<div style="' + marker_style + '"></div>';
+                    return_marker = '<div style="cursor: default;' + marker_style + '" title="' + alt_marker.name + '"></div>';
                 }
             }
         }
@@ -240,7 +237,7 @@ var HealthMonitor = HealthMonitor || (function () {
 
     			}
     			if (isNum(maxHP) && isNum(curHP) && curHP > (maxHP * state['HealthMonitor'].woundedLevel)) {
-                    if (state['HealthMonitor'].useAura1)obj.set('aura1_radius', '');
+                    if (state['HealthMonitor'].useAura1) obj.set('aura1_radius', '');
                     else obj.set('aura2_radius', '');
     			}
     		}
@@ -269,8 +266,9 @@ var HealthMonitor = HealthMonitor || (function () {
 
     handleDeath = function (obj, prev) {
         // Remove aura indicator if dead
-    	if (obj.get("represents") !== '' && obj.get("status_dead")) {
-    		obj.set('aura1_radius', '');
+    	if (obj.get("represents") !== '' && obj.get("status_" + state['HealthMonitor'].deadMarker)) {
+            if (state['HealthMonitor'].useAura1) obj.set('aura1_radius', '');
+            else obj.set('aura2_radius', '');
     	}
     },
 
