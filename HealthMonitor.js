@@ -1,6 +1,6 @@
 ﻿/*
 HealthMonitor
-Description of script
+A NPC health indicator for Roll20 games
 
 On Github:	https://github.com/blawson69
 Contact me: https://app.roll20.net/users/1781274/ben-l
